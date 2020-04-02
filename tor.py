@@ -49,7 +49,7 @@ useragents = [
  "YahooSeeker/1.2 (compatible; Mozilla 4.0; MSIE 5.5; yahooseeker at yahoo-inc dot com ; http://help.yahoo.com/help/us/shop/merchant/)"
 ]
 
-f = open("proxies.txt", r)
+f = open("proxies.txt", "r")
 f.read()
 
 def random_ipv4():
